@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Res, Put } from '@nestjs/common';
+import { Controller, Get, UseGuards, Res, Put, Param } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ServerService } from './server.service';
 import { AdminGuard } from '../../core/auth/guards/admin.guard';
@@ -26,6 +26,11 @@ export class ServerController {
   @Put('/reset-homebridge-accessory')
   resetHomebridgeAccessory() {
     return this.serverService.resetHomebridgeAccessory();
+  }
+
+  @Put('/set-instance/:instanceName')
+  setMultimodeInstance(@Param() param) {
+    return this.serverService.setMultimodeInstance(param.instanceName);
   }
 
 }

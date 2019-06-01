@@ -6,10 +6,7 @@ import { Logger } from '../../core/logger/logger.service';
 
 @Injectable()
 export class AccessoriesService {
-  private hapClient = new HapClient(
-    `http://localhost:${this.configService.homebridgeConfig.bridge.port}`,
-    this.configService.homebridgeConfig.bridge.pin,
-  );
+  private hapClient: HapClient;
 
   constructor(
     private readonly configService: ConfigService,
@@ -25,6 +22,11 @@ export class AccessoriesService {
       this.logger.error(`config.json does not define a port under bridge.port`);
       this.logger.error(`You can correct this automatically by going to the Config editor and clicking save and then restarting Homebridge.`);
     }
+
+    this.hapClient = new HapClient(
+      `http://localhost:${this.configService.homebridgeConfig.bridge.port}`,
+      this.configService.homebridgeConfig.bridge.pin,
+    );
 
     let services;
 

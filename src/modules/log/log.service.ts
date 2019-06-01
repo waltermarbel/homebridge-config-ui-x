@@ -12,25 +12,15 @@ export class LogService {
 
   constructor(
     private configService: ConfigService,
-  ) {
-    if (typeof this.configService.ui.log !== 'object') {
-      this.logNotConfigured();
-    } else if (this.configService.ui.log.method === 'file' && this.configService.ui.log.path) {
-      this.logFromFile();
-    } else if (this.configService.ui.log.method === 'systemd') {
-      this.logFromSystemd();
-    } else if (this.configService.ui.log.method === 'custom' && this.configService.ui.log.command) {
-      this.logFromCommand();
-    } else {
-      this.logNotConfigured();
-    }
-  }
+  ) { }
 
   /**
    * Socket handler
    * @param client
    */
   public connect(client, size) {
+    this.parseConfig();
+
     if (!semver.satisfies(process.version, `>=${this.configService.minimumNodeVersion}`)) {
       client.emit('stdout', color.yellow(`Node.js v${this.configService.minimumNodeVersion} higher is required for ${this.configService.name}.\n\r`));
       client.emit('stdout', color.yellow(`You may experience issues while running on Node.js ${process.version}.\n\r\n\r`));
@@ -43,6 +33,23 @@ export class LogService {
     } else {
       client.emit('stdout', color.red(`Cannot show logs. "log" option is not configured correctly in your Homebridge config.json file.\r\n\r\n`));
       client.emit('stdout', color.cyan(`See https://github.com/oznu/homebridge-config-ui-x#log-viewer-configuration for instructions.\r\n`));
+    }
+  }
+
+  /**
+   * Parse the config to workout the log command
+   */
+  private parseConfig() {
+    if (typeof this.configService.ui.log !== 'object') {
+      this.logNotConfigured();
+    } else if (this.configService.ui.log.method === 'file' && this.configService.ui.log.path) {
+      this.logFromFile();
+    } else if (this.configService.ui.log.method === 'systemd') {
+      this.logFromSystemd();
+    } else if (this.configService.ui.log.method === 'custom' && this.configService.ui.log.command) {
+      this.logFromCommand();
+    } else {
+      this.logNotConfigured();
     }
   }
 

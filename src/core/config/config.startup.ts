@@ -6,10 +6,16 @@ import * as fs from 'fs-extra';
  * Return config required to start the console server
  */
 export async function getStartupConfig() {
-  const configPath = process.env.UIX_CONFIG_PATH || path.resolve(os.homedir(), '.homebridge/config.json');
+  let ui;
 
-  const homebridgeConfig = await fs.readJSON(configPath);
-  const ui = Array.isArray(homebridgeConfig.platforms) ? homebridgeConfig.platforms.find(x => x.platform === 'config') : undefined;
+  if (process.env.UIX_MULTIMODE) {
+    const uiConfigPath = path.resolve(process.env.UIX_MULTIMODE, 'ui.json');
+    ui = await fs.readJSON(uiConfigPath);
+  } else {
+    const configPath = process.env.UIX_CONFIG_PATH || path.resolve(os.homedir(), '.homebridge/config.json');
+    const homebridgeConfig = await fs.readJSON(configPath);
+    ui = Array.isArray(homebridgeConfig.platforms) ? homebridgeConfig.platforms.find(x => x.platform === 'config') : undefined;
+  }
 
   const config = {} as {
     host?: '::' | '0.0.0.0' | string;
@@ -21,6 +27,7 @@ export async function getStartupConfig() {
     },
     cspWsOveride?: string;
     debug?: boolean;
+    port?: number;
   };
 
   // check if IPv6 is available on this host
@@ -60,6 +67,10 @@ export async function getStartupConfig() {
     config.debug = true;
   } else {
     config.debug = false;
+  }
+
+  if (ui.port) {
+    config.port = ui.port;
   }
 
   return config;

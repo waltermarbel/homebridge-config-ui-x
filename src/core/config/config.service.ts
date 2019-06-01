@@ -21,16 +21,6 @@ export interface HomebridgeConfig {
 export class ConfigService {
   public name = 'homebridge-config-ui-x';
 
-  // homebridge env
-  public configPath = process.env.UIX_CONFIG_PATH || path.resolve(os.homedir(), '.homebridge/config.json');
-  public storagePath = process.env.UIX_STORAGE_PATH || path.resolve(os.homedir(), '.homebridge');
-  public customPluginPath = process.env.UIX_CUSTOM_PLUGIN_PATH;
-  public secretPath = path.resolve(this.storagePath, '.uix-secrets');
-  public authPath = path.resolve(this.storagePath, 'auth.json');
-  public accessoryLayoutPath = path.resolve(this.storagePath, 'accessories', 'uiAccessoriesLayout.json');
-  public homebridgeInsecureMode = Boolean(process.env.UIX_INSECURE_MODE);
-  public homebridgeNoTimestamps = Boolean(process.env.UIX_LOG_NO_TIMESTAMPS);
-
   // server env
   public minimumNodeVersion = '8.15.1';
   public runningInDocker = Boolean(process.env.HOMEBRIDGE_CONFIG_UI === '1');
@@ -39,9 +29,19 @@ export class ConfigService {
   public enableTerminalAccess = this.runningInDocker || Boolean(process.env.HOMEBRIDGE_CONFIG_UI_TERMINAL === '1');
   public branding = process.env.CONFIG_UI_BRANDING || false;
 
+  // homebridge env
+  public configPath: string;
+  public storagePath: string;
+  public customPluginPath: string;
+  public secretPath: string;
+  public authPath: string;
+  public accessoryLayoutPath: string;
+  public homebridgeInsecureMode: boolean;
+  public homebridgeNoTimestamps: boolean;
+
   // docker paths
-  public startupScript = path.resolve(this.storagePath, 'startup.sh');
-  public dockerEnvFile = path.resolve(this.storagePath, '.docker.env');
+  public startupScript: string;
+  public dockerEnvFile: string;
 
   // package.json
   public package = fs.readJsonSync(path.resolve(process.env.UIX_BASE_PATH, 'package.json'));
@@ -89,17 +89,40 @@ export class ConfigService {
 
   public instanceId: string;
 
-  constructor() {
-    this.homebridgeConfig = fs.readJSONSync(this.configPath);
-    this.ui = Array.isArray(this.homebridgeConfig.platforms) ? this.homebridgeConfig.platforms.find(x => x.platform === 'config') : undefined;
+  // multimode settings - mode these
+  public multimodeInstance: string;
+  public multimodeStoragePath: string;
+  public multimodeConfigPath: string;
 
-    if (!this.ui) {
-      this.ui = {
-        name: 'Config',
-      } as any;
+  public multimodeConfig: {
+    port?: number;
+    host?: '::' | '0.0.0.0' | string;
+    auth: 'form' | 'none';
+    ssl?: {
+      key?: string;
+      cert?: string;
+      pfx?: string;
+      passphrase?: string;
+    };
+    proxyHost?: string;
+    debug?: boolean;
+    instances: {
+      name: string;
+      path: string;
+      insecure?: boolean;
+      noTimstamps?: boolean;
+      customPluginPath?: string;
+    }[];
+  };
+
+  constructor() {
+    if (process.env.UIX_MULTIMODE) {
+      this.multimodeStoragePath = path.resolve(process.env.UIX_MULTIMODE);
+      this.multimodeConfigPath = path.resolve(this.multimodeStoragePath, 'ui.json');
+      this.getMultimodeConfig();
     }
 
-    process.env.UIX_PLUGIN_NAME = this.ui.name || 'homebridge-config-ui-x';
+    this.reloadConfig();
 
     if (this.runningInDocker) {
       this.setConfigForDocker();
@@ -115,6 +138,47 @@ export class ConfigService {
 
     this.secrets = this.getSecrets();
     this.instanceId = this.getInstanceId();
+  }
+
+  /** Load the config */
+  public reloadConfig() {
+    if (this.multimodeInstance) {
+      this.setMultimodeInstance(this.multimodeInstance);
+    } else {
+      this.configPath = process.env.UIX_CONFIG_PATH || path.resolve(os.homedir(), '.homebridge/config.json');
+      this.storagePath = process.env.UIX_STORAGE_PATH || path.resolve(os.homedir(), '.homebridge');
+      this.secretPath = path.resolve(this.storagePath, '.uix-secrets');
+      this.authPath = path.resolve(this.storagePath, 'auth.json');
+      this.customPluginPath = process.env.UIX_CUSTOM_PLUGIN_PATH;
+      this.homebridgeInsecureMode = Boolean(process.env.UIX_INSECURE_MODE);
+      this.homebridgeNoTimestamps = Boolean(process.env.UIX_LOG_NO_TIMESTAMPS);
+    }
+
+    this.accessoryLayoutPath = path.resolve(this.storagePath, 'accessories', 'uiAccessoriesLayout.json');
+
+    // docker paths
+    this.startupScript = path.resolve(this.storagePath, 'startup.sh');
+    this.dockerEnvFile = path.resolve(this.storagePath, '.docker.env');
+
+    this.homebridgeConfig = fs.readJSONSync(this.configPath);
+    this.ui = Array.isArray(this.homebridgeConfig.platforms) ? this.homebridgeConfig.platforms.find(x => x.platform === 'config') : undefined;
+
+    if (!this.ui) {
+      this.ui = {
+        name: 'Config',
+      } as any;
+    }
+
+    if (this.multimodeInstance) {
+      this.ui.port = this.multimodeConfig.port || 8080;
+      this.ui.auth = this.multimodeConfig.auth || 'form';
+      this.ui.host = this.multimodeConfig.host;
+      this.ui.debug = this.multimodeConfig.debug;
+      this.ui.proxyHost = this.multimodeConfig.proxyHost;
+      this.ui.ssl = this.multimodeConfig.ssl;
+    }
+
+    process.env.UIX_PLUGIN_NAME = this.ui.name || 'homebridge-config-ui-x';
   }
 
   /**
@@ -136,11 +200,49 @@ export class ConfigService {
         websocketCompatibilityMode: this.ui.websocketCompatibilityMode || false,
         branding: this.branding,
         instanceId: this.instanceId,
+        multimodeInstance: this.multimodeInstance,
       },
       formAuth: Boolean(this.ui.auth !== 'none'),
       theme: this.ui.theme || 'teal',
       serverTimestamp: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Change to a different multimode instance
+   */
+  public changeInstance(instanceName: string) {
+    this.multimodeInstance = instanceName;
+    this.reloadConfig();
+  }
+
+  /**
+   * Populate the config for a multimode setup
+   */
+  private getMultimodeConfig() {
+    this.multimodeConfig = fs.readJsonSync(this.multimodeConfigPath);
+    this.multimodeInstance = this.multimodeConfig.instances[0].name;
+  }
+
+  /**
+   * Set the multimode config for the current instance
+   * @param instanceName
+   */
+  private setMultimodeInstance(instanceName: string) {
+    const config = this.multimodeConfig.instances.find(x => x.name === instanceName);
+
+    if (!config) {
+      throw new Error(`Could not find instance with name ${instanceName}`);
+    }
+
+    this.multimodeInstance = config.name;
+    this.configPath = path.resolve(config.path, 'config.json');
+    this.storagePath = path.resolve(config.path);
+    this.customPluginPath = config.customPluginPath ? path.resolve(config.customPluginPath) : undefined;
+    this.secretPath = path.resolve(this.multimodeStoragePath, '.uix-secrets');
+    this.authPath = path.resolve(this.multimodeStoragePath, 'auth.json');
+    this.homebridgeInsecureMode = config.insecure;
+    this.homebridgeNoTimestamps = config.noTimstamps;
   }
 
   /**

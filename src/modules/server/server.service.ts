@@ -130,4 +130,19 @@ export class ServerService {
 
     return 'X-HM://' + encodedPayload + accessoryInfo.setupID;
   }
+
+  /**
+   * Sets the current multimode instance
+   */
+  public async setMultimodeInstance(instanceName: string) {
+    try {
+      this.configService.changeInstance(instanceName);
+      this.logger.log(`Changed To "${instanceName} - Config Reloaded`);
+      return { instanceName };
+    } catch (e) {
+      this.logger.log(`Failed To Change Instance To ${instanceName}`);
+      this.logger.error(e);
+      throw e;
+    }
+  }
 }

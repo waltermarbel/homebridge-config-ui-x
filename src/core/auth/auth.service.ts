@@ -6,7 +6,6 @@ import { Injectable, ForbiddenException, BadRequestException, UnauthorizedExcept
 import { ConfigService } from '../config/config.service';
 import { Logger } from '../logger/logger.service';
 import { WsException } from '@nestjs/websockets';
-import { UsersController } from 'src/modules/users/users.controller';
 
 export interface UserInterface {
   id: number;

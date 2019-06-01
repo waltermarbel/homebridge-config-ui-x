@@ -12,12 +12,15 @@ commander
   .option('-P, --plugin-path [path]', '', (p) => process.env.UIX_CUSTOM_PLUGIN_PATH = p)
   .option('-I, --insecure', '', () => process.env.UIX_INSECURE_MODE = '1')
   .option('-T, --no-timestamp', '', () => process.env.UIX_LOG_NO_TIMESTAMPS = '1')
+  .option('--multimode [path]', '', (p) => process.env.UIX_MULTIMODE = p)
   .parse(process.argv);
 
-if (!process.env.UIX_STORAGE_PATH) {
-  process.env.UIX_STORAGE_PATH = path.resolve(os.homedir(), '.homebridge');
-}
+if (!process.env.UIX_MULTIMODE) {
+  if (!process.env.UIX_STORAGE_PATH) {
+    process.env.UIX_STORAGE_PATH = path.resolve(os.homedir(), '.homebridge');
+  }
 
-process.env.UIX_CONFIG_PATH = path.resolve(process.env.UIX_STORAGE_PATH, 'config.json');
+  process.env.UIX_CONFIG_PATH = path.resolve(process.env.UIX_STORAGE_PATH, 'config.json');
+}
 
 import('../main');
