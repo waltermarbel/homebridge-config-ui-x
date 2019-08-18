@@ -656,4 +656,43 @@ export class PluginsService {
     }
   }
 
+  /**
+   * We may need to stop this entire platform to perform an update on certain platforms
+   */
+  public async updateSelf() {
+    const updateScriptPath = path.resolve(this.configService.storagePath, 'uix-update.js');
+    const lockfile = path.resolve(this.configService.storagePath, 'uix-update.lock');
+    const logfile = path.resolve(this.configService.storagePath, 'uix-update.log');
+
+    // copy update script out of the package
+    await fs.copy(path.resolve(this.configService.packagePath, 'dist/bin/update.js'), updateScriptPath);
+
+    // create a lock file that can be used by supervisors to prevent automatically restarting
+    await fs.createFile(lockfile);
+
+    this.logger.warn(`[Self Update] Starting self update...`);
+    this.logger.warn(`[Self Update] Logging to ${logfile}`);
+    this.logger.warn(`[Self Update] Created update lock file at ${lockfile}`);
+
+    const update = child_process.spawn(process.execPath, [updateScriptPath], {
+      detached: true,
+      stdio: 'ignore',
+      env: Object.assign({
+        UIX_OFFLINE_UPDATE_PACKAGE: 'homebridge-hue',
+        UIX_OFFLINE_UPDATE_SELF: updateScriptPath,
+        UIX_OFFLINE_UPDATE_STORAGE_PATH: this.configService.storagePath,
+        UIX_OFFLINE_UPDATE_LOCKFILE: lockfile,
+        UIX_OFFLINE_UPDATE_LOG: logfile,
+      }, process.env),
+    });
+
+    update.unref();
+
+    this.logger.warn(`[Self Update] Shutting down to perform update on self.`);
+
+    setTimeout(() => {
+      process.exit(1);
+    }, 20);
+  }
+
 }

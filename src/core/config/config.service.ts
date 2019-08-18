@@ -44,8 +44,9 @@ export class ConfigService {
   public startupScript = path.resolve(this.storagePath, 'startup.sh');
   public dockerEnvFile = path.resolve(this.storagePath, '.docker.env');
 
-  // package.json
-  public package = fs.readJsonSync(path.resolve(process.env.UIX_BASE_PATH, 'package.json'));
+  // package paths
+  public packagePath = process.env.UIX_BASE_PATH;
+  public package = fs.readJsonSync(path.resolve(this.packagePath, 'package.json'));
 
   public homebridgeConfig: HomebridgeConfig;
 

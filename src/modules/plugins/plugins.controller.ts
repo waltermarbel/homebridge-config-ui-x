@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Param, UseGuards } from '@nestjs/common';
 import { PluginsService } from './plugins.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminGuard } from '../../core/auth/guards/admin.guard';
@@ -39,5 +39,12 @@ export class PluginsController {
   @Get('release/:pluginName')
   getPluginRelease(@Param() param) {
     return this.pluginsService.getPluginRelease(param.pluginName);
+  }
+
+  @UseGuards(AdminGuard)
+  @Put('update/self')
+  updateSelf(@Param() param) {
+    console.log('got request');
+    return this.pluginsService.updateSelf();
   }
 }

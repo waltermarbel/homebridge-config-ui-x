@@ -3,6 +3,7 @@
 process.title = 'homebridge-config-ui-x';
 
 import * as os from 'os';
+import * as fs from 'fs';
 import * as path from 'path';
 import * as commander from 'commander';
 
