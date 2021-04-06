@@ -76,7 +76,7 @@
     "request-promise-native": "^1.0.8",
     "rxjs": "^6.5.4",
     "semver": "^6.3.0",
-    "systeminformation": "^4.21.1",
+    "systeminformation": "^5.6.4",
     "tail": "^2.0.3",
     "tcp-port-used": "^1.0.1"
   },
